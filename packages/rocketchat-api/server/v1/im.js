@@ -278,6 +278,7 @@ RocketChat.API.v1.addRoute(['dm.list', 'im.list'], { authRequired: true }, {
 		const { sort, fields, query } = this.parseJsonQuery();
 		const ourQuery = Object.assign({}, query, {
 			t: 'd',
+			open: true,
 			'u._id': this.userId
 		});
 
