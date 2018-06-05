@@ -50,6 +50,39 @@ RocketChat.API.v1.addRoute('rooms.get', { authRequired: true }, {
 	}
 });
 
+RocketChat.API.v1.addRoute('rooms.getAll', { authRequired: true }, {
+	get() {
+		const { offset, count } = this.getPaginationItems();
+		const { sort, fields, query } = this.parseJsonQuery();
+		const hasPermissionToSeeAllPublicChannels = RocketChat.authz.hasPermission(this.userId, 'view-c-room');
+
+		const ourQuery = Object.assign({});
+
+		if (RocketChat.authz.hasPermission(this.userId, 'view-joined-room') && !hasPermissionToSeeAllPublicChannels) {
+			ourQuery.usernames = {
+				$in: [this.user.username]
+			};
+		} else if (!hasPermissionToSeeAllPublicChannels) {
+			return RocketChat.API.v1.unauthorized();
+		}
+
+		const rooms = RocketChat.models.Rooms.find(ourQuery, {
+			sort: sort ? sort : { name: 1 },
+			skip: offset,
+			limit: count,
+			fields
+		}).fetch();
+
+		return RocketChat.API.v1.success({
+			rooms: rooms,
+			count: rooms.length,
+			offset,
+			total: RocketChat.models.Rooms.find(ourQuery).count()
+		});
+	}
+});
+
+
 RocketChat.API.v1.addRoute('rooms.upload/:rid', { authRequired: true }, {
 	post() {
 		const room = Meteor.call('canAccessRoom', this.urlParams.rid, this.userId);
